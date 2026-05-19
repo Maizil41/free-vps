@@ -1,0 +1,34 @@
+name: Temporary SSH via Cloudflare Tunnel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  tunnel:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install cloudflared
+        run: |
+          wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O cloudflared
+          chmod +x cloudflared
+          sudo mv cloudflared /usr/local/bin/cloudflared
+          cloudflared -v
+
+      - name: Install openssh-server
+        run: |
+          sudo apt update
+          sudo apt install -y openssh-server
+          sudo systemctl enable ssh
+          sudo systemctl start ssh
+          sudo systemctl status ssh --no-pager
+
+      - name: Set runner password
+        run: |
+          echo "root" | sudo chpasswd
+
+      - name: Start Cloudflare Tunnel (SSH)
+        env:
+          CF_TUNNEL_TOKEN: ${{ secrets.CF_TUNNEL_TOKEN }}
+        run: |
+          cloudflared tunnel run --token "$CF_TUNNEL_TOKEN"
